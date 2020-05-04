@@ -1,0 +1,337 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="apple-touch-icon" type="image/png" href="https://kbppassignment1.s3.us-east-1.amazonaws.com/logo.png">
+    <meta name="apple-mobile-web-app-title" content="CodePen">
+    <link rel="shortcut icon" type="image/x-icon" href="https://kbppassignment1.s3.us-east-1.amazonaws.com/logo.png">
+    <link rel="mask-icon" type="" href="https://ppkbfrontend.s3.us-east-1.amazonaws.com/logo.png" color="#111">
+    <title>AI Photos</title>
+    <link rel="stylesheet" href="lex_audio/example/style.css">
+    <!--    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/5.0.0/normalize.min.css">-->
+    <style>
+        @import url(https://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700);
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            background-image: url('background.jpg');
+        }
+
+        body, html {
+            height: 100%;
+        }
+
+        body {
+            font-family: 'Source Sans Pro', sans-serif;
+            font-size: 200%;
+            display: -webkit-box;
+            display: flex;
+            -webkit-box-orient: vertical;
+            -webkit-box-direction: normal;
+            flex-direction: column;
+            max-width: 700px;
+            margin: 0 auto;
+            border-radius: 8px;
+        }
+
+        .chat-output {
+            -webkit-box-flex: 1;
+            flex: 1;
+            padding: 5px;
+            display: -webkit-box;
+            display: flex;
+            background: #f4faec;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+			border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            overflow-y: auto;
+            -webkit-box-orient: vertical;
+            -webkit-box-direction: normal;
+            flex-direction: column;
+        }
+
+        .chat-output > div {
+            margin: 0 0 20px 0;
+        }
+
+        .chat-output .user-message .message {
+            background: #DB5639;
+            color: #f4faec;
+        }
+
+        .chat-output .bot-message {
+            text-align: right;
+        }
+
+        .chat-output .bot-message .message {
+            background: #eee;
+        }
+
+        .chat-output .message {
+            display: inline-block;
+            padding: 12px 20px;
+            border-radius: 10px;
+        }
+
+        .chat-input {
+            padding: 5px;
+            background: #f4faec;
+            border-bottom: 0;
+            border-bottom-left-radius: 5px;
+            border-bottom-right-radius: 5px;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+        }
+
+        .chat-input .user-input {
+            width: 100%;
+            font-size: 80%;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 8px;
+            float: left;
+        }
+
+        .button {
+            background-color: #DB5639; /* Green */
+            width: 100%;
+            border: none;
+            color: #f4faec;
+            padding: 2px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 80%;
+            cursor: pointer;
+            border-radius: 20px;
+        }
+    </style>
+    <script>
+        window.console = window.console || function (t) {
+        };
+    </script>
+    <script>
+        if (document.location.search.match(/type=embed/gi)) {
+            window.parent.postMessage("resize", "*");
+        }
+    </script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/axios/dist/axios.standalone.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/rollups/hmac-sha256.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/rollups/sha256.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/components/hmac.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/CryptoJS/components/enc-base64.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/url-template/url-template.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/sigV4Client.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/apiGatewayClient.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/simpleHttpClient.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/lib/apiGatewayCore/utils.js"></script>
+    <script type="text/javascript" src="apiGateway-js-sdk/apigClient.js"></script>
+</head>
+<body translate="no">
+
+
+<div class="chat-input">
+    <label>Search for images:</label>
+    <div style="display:flex; flex-direction: row; justify-content: center; align-items: center">
+        <input type="text" id="user-input" class="user-input" placeholder="Type Here!!"/>
+        <p>
+            <img id="audio-control" class="white-circle" src="logo.png">
+            <canvas class="visualizer"></canvas>
+        </p>
+    </div>
+    <button id="text-submit" class="button" type="submit" value="submit">Search</button>
+    <div style="display:flex; flex-direction: row; align-items: left">
+        <p><span id="message"></span></p>
+        &nbsp;
+        <p>
+            <input type="password" id="ACCESS_ID" name="ACCESS ID" placeholder="ACCESS ID" value=""/>
+        </p>
+        <p>
+            <input type="password" id="SECRET_KEY" name="SECRET KEY" placeholder="SECRET KEY" value=""/>
+        </p>
+    </div>
+</div>
+
+<div class="chat-input" id="chat-output">
+    <div style="display:flex; flex-direction: row; align-items: center">
+        <label for="img">Upload image:</label>
+		<input id="inputFileToLoad" type="file" accept="image/*" onchange="encodeImageFileAsURL();" />
+		<button id="img-submit" class="button" type="submit" value="submit">Upload</button>
+    </div>
+	
+</div>
+
+<div id = "imgTest"></div>
+
+<div class="chat-output" id="img-output"></div>
+
+
+<script src="https://static.codepen.io/assets/common/stopExecutionOnTimeout-db44b196776521ea816683afab021f757616c80860d31da6232dedb8d7cc4862.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/2.2.2/jquery.min.js"></script>
+
+<script src="https://sdk.amazonaws.com/js/aws-sdk-2.48.0.min.js"></script>
+<script src="lex_audio/dist/aws-lex-audio.js" type="text/javascript"></script>
+<script src="lex_audio/example/renderer.js" type="text/javascript"></script>
+
+<script id="rendered-js">
+    var outputArea = $("#img-output");
+    var apigClient = apigClientFactory.newClient();
+
+    var waveform = window.Waveform();
+    var message = document.getElementById('message');
+    var config, conversation;
+	var image_encoded;
+	
+	function encodeImageFileAsURL() {
+
+		var filesSelected = document.getElementById("inputFileToLoad").files;
+		if (filesSelected.length > 0) {
+		  var fileToLoad = filesSelected[0];
+
+		  var fileReader = new FileReader();
+
+		  fileReader.onload = function(fileLoadedEvent) {
+			var srcData = fileLoadedEvent.target.result; // <--- data: base64
+
+			var newImage = document.createElement('img');
+			newImage.src = srcData;
+
+			document.getElementById("imgTest").innerHTML = newImage.outerHTML;
+			image_encoded = srcData
+		  }
+		  fileReader.readAsDataURL(fileToLoad);
+		}
+	}
+	
+
+    message.textContent = 'Passive';
+
+    document.getElementById('audio-control').onclick = function () {
+
+        var elastic_params = {'body': ""}
+        var params = {};
+        var additionalParams = {};
+
+        AWS.config.credentials = new AWS.Credentials(document.getElementById('ACCESS_ID').value, document.getElementById('SECRET_KEY').value, null);
+        AWS.config.region = 'us-east-1';
+
+        config = {
+            lexConfig: {botName: 'SearchPhotos'}
+        };
+
+        conversation = new LexAudio.conversation(config, function (state) {
+            message.textContent = state + '...';
+            if (state === 'Listening') {
+                waveform.prepCanvas();
+            }
+            if (state === 'Sending') {
+                waveform.clearCanvas();
+            }
+        }, function (data) {
+            $("#user-input").val(data.inputTranscript)
+
+            elastic_params['body'] = JSON.parse(data.message)
+            console.log('Transcript: ', data.inputTranscript, ", Response: ", data.message);
+            // Call Elastic Search here with data.message items
+            apigClient.searchPost(params, elastic_params, additionalParams)
+                .then(function (result) {
+                    var objects = result.data.body
+					var i;
+					var text ="";
+					for (i = 0; i < objects.length; i++) {
+						text += `<img src=` + objects[i] + ` height="200" width="200" >`;
+					}
+					document.getElementById('img-output').innerHTML =  `<div>` + text + `</div>`;
+                })
+        }, function (error) {
+            message.textContent = error;
+        }, function (timeDomain, bufferLength) {
+            waveform.visualizeAudioBuffer(timeDomain, bufferLength);
+        });
+        conversation.advanceConversation();
+
+    };
+
+    document.getElementById('text-submit').onclick = function () {
+
+        var message = $("#user-input").val();
+        var elastic_params = {'body': ""};
+
+        var params = {};
+        var additionalParams = {};
+        var body = {
+            "message": $("#user-input").val()
+        };
+
+        $("#user-input").val("");
+
+        // Use this function to talk to lex and get result
+        apigClient.lexPost(params, body, additionalParams)
+            .then(function (result) {
+                elastic_params['body'] = result.data.body
+                console.log( "Response: ", elastic_params['body']);
+                apigClient.searchPost(params, elastic_params, additionalParams)
+                    .then(function (result) {
+                        var objects = result.data.body
+						var i;
+						var text ="";
+						for (i = 0; i < objects.length; i++) {
+							text += `<img src=` + objects[i] + ` height="200" width="200" >`;
+						}
+		                document.getElementById('img-output').innerHTML =  `<div>` + text + `</div>`;
+                    }).catch(function (result) {
+                    setTimeout(function () {
+                        outputArea.append(`<div class='message'>` + JSON.stringify(result) + `</div>`
+                        );
+                    }, 5000)
+                });
+
+
+            }).catch(function (result) {
+            setTimeout(function () {
+                outputArea.append(`<div class='message'>` + result.toString() + `</div>`
+                );
+            }, 5000)
+        });
+
+
+        $("#user-input").val("");
+
+	};
+	
+  
+  
+	document.getElementById('img-submit').onclick = function () {
+		var elastic_params = {'body': ""};
+		var body = {
+            "body": image_encoded
+        };
+		console.log(body)
+        var params = {};
+        var additionalParams = {};
+		
+		apigClient.uploadPut(params, body, additionalParams)
+            .then(function (result) {
+				document.getElementById('imgTest').innerHTML =  `<div></div>`;
+				document.getElementById('img-output').innerHTML =  `<div></div>`;
+            }).catch(function (result) {
+            setTimeout(function () {
+                outputArea.append(`<div class='message'>` + result.toString() + `</div>`
+                );
+            }, 5000)
+        });
+	};
+    //# sourceURL=pen.js
+
+    // window.setInterval(function () {
+    //     var elem = document.getElementById('chat-output');
+    //     elem.scrollTop = elem.scrollHeight;
+    // }, 10);
+</script>
+
+
+</body>
+</html>
